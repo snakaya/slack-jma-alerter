@@ -13,8 +13,8 @@ const xmlparseAsync = util.promisify(require('xml2js').parseString);
 const readFileAsync = util.promisify(fs.readFile);
 const writeFileAsync = util.promisify(fs.writeFile);
 
-const stateCacheFile = './state.json';
-
+const settingsInfo = config.Settings;
+const stateCacheFile = settingsInfo.StateFileName;
 const slackInfo = config.Slack;
 
 console.log('Slack notify: ' + slackInfo.notify.webhook + ' at ' + slackInfo.notify.channel);
@@ -73,7 +73,7 @@ async function fetchFeedAsync() {
 	}
 	
 	console.log((new Date()).toString() + ": BEGIN");
-	await jmaparser.processEntriesAsync(data.feed.entry, slackInfo);
+	await jmaparser.processEntriesAsync(data.feed.entry, settingsInfo, slackInfo);
 	console.log((new Date()).toString() + ": END");
 	
 }

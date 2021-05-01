@@ -1,4 +1,9 @@
 {
+	"Settings": {
+		"StateFileName": "/tmp/state.json",						 // ステータス管理ファイル名
+		"AlertKind": ["震度速報","震源に関する情報","震源・震度情報"], // 通知する情報種類(のTitle名)を選択して下さい
+		"FirstEventOnly": true									// 複数報ある場合の初回のみを通知するかどうか (Not yet)
+	},
 	"Slack": {
 		"notify": {
 			"webhook": "通知用Webhook URI",

@@ -8,18 +8,18 @@ const url = require('url');
 const xmlparseAsync = util.promisify(require('xml2js').parseString);
 
 // feedされたエントリを処理
-exports.processEntriesAsync = async function(entries, slackInfo)
+exports.processEntriesAsync = async function(entries, settingsInfo, slackInfo)
 {
 	for(const entry of entries){
 		console.log(util.format('%s:%s\nLink:%s', entry.title, entry.content._ , entry.link.$.href));
-		await processXmlAsync(entry.link.$.href, slackInfo);
+		await processXmlAsync(entry.link.$.href, settingsInfo, slackInfo);
 	}
 }
 
 // XMLを処理する
-function processXmlAsync(uri, slackInfo){
+function processXmlAsync(uri, settingsInfo, slackInfo){
 	return new Promise(async (resolve, reject) => {
-		const message = await loadXmlAsync(uri, slackInfo);
+		const message = await loadXmlAsync(uri, settingsInfo, slackInfo);
 
 		if(message){
 			console.log(JSON.stringify(message));
@@ -45,7 +45,7 @@ function processXmlAsync(uri, slackInfo){
 }
 
 // XMLを読み込んでSlackメッセージオブジェクトを作る
-function loadXmlAsync(uri, slackInfo){
+function loadXmlAsync(uri, settingsInfo, slackInfo){
 	return new Promise(async (resolve, reject) => {
 		
 		let body,message,xmlobj;
@@ -65,7 +65,7 @@ function loadXmlAsync(uri, slackInfo){
 		
 		try{
 			xmlobj = await xmlparseAsync(body, {trim: true, explicitArray: false });
-			message = processObject(xmlobj);
+			message = processObject(xmlobj, settingsInfo);
 			if(message){
 				message.webhook = slackInfo.notify.webhook;
 				message.channel = slackInfo.notify.channel;
@@ -85,18 +85,22 @@ function loadXmlAsync(uri, slackInfo){
 }
 
 // メッセージ種別に応じた処理を呼ぶ
-function processObject(object){
+function processObject(object, settingsInfo){
 	const title = object && object.Report && object.Report.Head && object.Report.Head.Title;
-	switch(title){
-		case '震度速報':
-			return processSummary(object);
-		case '震源に関する情報':
-			return processEpicenter(object);
-		case '震源・震度情報':
-			return processDetail(object);
-		default:
-			console.log('unknown title:'+title);
-			return null;
+	if(settingsInfo.AlertKind.includes(title)) {
+		switch(title){
+			case '震度速報':
+				return processSummary(object);
+			case '震源に関する情報':
+				return processEpicenter(object);
+			case '震源・震度情報':
+				return processDetail(object);
+			default:
+				console.log('unknown title:'+title);
+				return null;
+		}
+	} else {
+		return null;
 	}
 }
 
