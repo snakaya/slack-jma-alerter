@@ -1,46 +1,37 @@
-'use strict';
+import { processEntriesAsync } from "./parseEntries";
+import fs from 'fs';
+import util from 'util';
+import http from 'http';
+import config from "config";
 
-const util = require('util');
-const http = require('http');
-const url = require('url');
-const fs = require('fs');
-const config = require('config');
-const cron = require('node-cron');
-
-const jmaparser = require('./jmaparser');
+interface JmaEntries {
+	[href: string]: number;
+}
 
 const xmlparseAsync = util.promisify(require('xml2js').parseString);
-const readFileAsync = util.promisify(fs.readFile);
-const writeFileAsync = util.promisify(fs.writeFile);
+const readFileAsync = util.promisify(fs.readFileSync);
+const writeFileAsync = util.promisify(fs.writeFileSync);
 
-const settingsInfo = config.Settings;
-const stateCacheFile = settingsInfo.StateFileName;
-const slackInfo = config.Slack;
 
-console.log('Slack notify: ' + slackInfo.notify.webhook + ' at ' + slackInfo.notify.channel);
-console.log('Slack error : ' + slackInfo.error.webhook + ' at ' + slackInfo.error.channel);
+export const pollingAsync = async (eqvolURL: string, stateCacheFile: string): Promise<void> => {
 
-cron.schedule('21 * * * * *', async () =>{await fetchFeedAsync()});
-
-async function fetchFeedAsync() {
-	
-	let lastModified,currentLastEntries;
+	let lastModified, currentLastEntries;
 	
 	try{
-		const currentStateJSON = await readFileAsync(stateCacheFile,'utf-8');
+		const currentStateJSON = fs.readFileSync(stateCacheFile,'utf-8');
 		
 		const currentState = await JSON.parse(currentStateJSON);
 		
-		lastModified = new Date(currentState.lastModified);
-		currentLastEntries = currentState.entry;
+		let lastModified = new Date(currentState.lastModified);
+		let currentLastEntries: JmaEntries = currentState.entry;
 		
 	}catch(e){
 		console.log("STATE:" + e);
 	}
-	
-	let data,body;
+
+	let data, body;
 	try{
-		const result = await httpGetAsync('http://www.data.jma.go.jp/developer/xml/feed/eqvol.xml', lastModified);
+		const result:any = await getFeedAsync(eqvolURL, lastModified);
 		if(result.data === null){
 			// no data.
 			return;
@@ -57,29 +48,29 @@ async function fetchFeedAsync() {
 	
 	let newLastEntries;
 	try{
-		newLastEntries = filterFeedEntries(data,currentLastEntries);
+		newLastEntries = filterFeedEntries(data, currentLastEntries);
 	}catch(e){
 		console.error("FEED:" + e);
-		await writeFileAsync('parseError.'+Date.now()+'.xml', body);
+		fs.writeFileSync("parseError." + Date.now() + ".xml", body);
 		return;
 	}
 	
-	const json = JSON.stringify({"entry":newLastEntries,"lastModified":lastModified});
+	const json = JSON.stringify({ "entry": newLastEntries, "lastModified": lastModified});
 	
 	try{
-		await writeFileAsync(stateCacheFile,json);
+		fs.writeFileSync(stateCacheFile, json);
 	}catch(e){
 		console.log(e);
 	}
 	
 	console.log((new Date()).toString() + ": BEGIN");
-	await jmaparser.processEntriesAsync(data.feed.entry, settingsInfo, slackInfo);
+	await processEntriesAsync(data.feed.entry);
 	console.log((new Date()).toString() + ": END");
-	
+
 }
 
-function filterFeedEntries(data, currentLastEntries) {
-	let newLastEntries = {};
+function filterFeedEntries(data:any, currentLastEntries: { [href: string]: number }) {
+	let newLastEntries: JmaEntries = {};
 	let filteredEntries = [];
 	
 	for(let entry of data.feed.entry.reverse()){
@@ -95,19 +86,19 @@ function filterFeedEntries(data, currentLastEntries) {
 	return newLastEntries;
 }
 
-function httpGetAsync(uri,ifModifiedSince) {
+function getFeedAsync(uri:string, ifModifiedSince:Date) {
 	return new Promise((resolve, reject) => {
-		const options = url.parse(uri);
-		
+		let req_headers:{[name:string]: string} = {};
 		if(ifModifiedSince != null){
-			options.headers = {
-				'if-modified-since': ifModifiedSince.toUTCString(),
-			};
+			req_headers['if-modified-since'] = ifModifiedSince.toUTCString();
 		}
-		options.method='GET';
+		const options: http.RequestOptions = {
+			method: 'GET',
+			headers: req_headers
+		};
 		
-		const req = http.request(options,(res) => {
-			
+		const req = http.request(uri, options,(res) => {
+
 			if(res.statusCode == 304){
 				resolve({
 					'lastModified' : ifModifiedSince,
@@ -139,7 +130,7 @@ function httpGetAsync(uri,ifModifiedSince) {
 					});
 				}catch(error){
 					try{
-						await writeFileAsync('xmlError.'+Date.now()+'.xml', body);
+						fs.writeFileSync("xmlError." + Date.now() + ".xml", body);
 					}catch(e){
 						console.log("Cannot save Error XML" + e);
 					}
@@ -153,4 +144,3 @@ function httpGetAsync(uri,ifModifiedSince) {
 		req.end();
 	});
 }
-

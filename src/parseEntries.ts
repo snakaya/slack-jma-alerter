@@ -1,31 +1,44 @@
-'use strict';
+import * as util from 'util';
+import * as http from 'http';
+import * as https from 'https';
+import * as url from 'url';
+import config from "config";
+import { App, LogLevel } from "@slack/bolt";
 
-const util = require('util');
-const http = require('http');
-const https = require('https');
-const url = require('url');
-
+const settingsInfo: any = config.get("Settings");
+const slackInfo: any = config.get("Slack");
 const xmlparseAsync = util.promisify(require('xml2js').parseString);
 
+const app = new App({
+    token: process.env.SLACK_BOT_TOKEN,
+    signingSecret: process.env.SLACK_SIGNING_SECRET,
+    logLevel: LogLevel.DEBUG
+});
+
 // feedされたエントリを処理
-exports.processEntriesAsync = async function(entries, settingsInfo, slackInfo)
-{
+export const processEntriesAsync = async (entries:any) => {
 	for(const entry of entries){
 		console.log(util.format('%s:%s\nLink:%s', entry.title, entry.content._ , entry.link.$.href));
-		await processXmlAsync(entry.link.$.href, settingsInfo, slackInfo);
+		await processXmlAsync(entry.link.$.href as string);
 	}
 }
 
 // XMLを処理する
-function processXmlAsync(uri, settingsInfo, slackInfo){
+function processXmlAsync(uri:string){
 	return new Promise(async (resolve, reject) => {
-		const message = await loadXmlAsync(uri, settingsInfo, slackInfo);
+		const message:any = await loadXmlAsync(uri);
 
 		if(message){
 			console.log(JSON.stringify(message));
 			try{
-				const response = await httpsPostAsync(message.webhook ,message);
-				resolve(response);
+				const result = await app.client.chat.postMessage({
+					token: process.env.SLACK_BOT_TOKEN,
+					channel: process.env.CHANNELL_NAME,
+					text: JSON.stringify(message)
+				});
+				resolve(null);
+				//const response = await httpsPostAsync(message.webhook ,message);
+				//resolve(response);
 			}catch(error){
 				if(error instanceof Error){
 					console.log('http posting error:%s\n%s',error.message,error.stack);
@@ -45,12 +58,12 @@ function processXmlAsync(uri, settingsInfo, slackInfo){
 }
 
 // XMLを読み込んでSlackメッセージオブジェクトを作る
-function loadXmlAsync(uri, settingsInfo, slackInfo){
+function loadXmlAsync(uri:string){
 	return new Promise(async (resolve, reject) => {
 		
-		let body,message,xmlobj;
+		let body:any, message:any, xmlobj:any;
 		try{
-			body = await httpGetAsync(uri);
+			body = await getEntryAsync(uri);
 		}catch(error){
 			if(error instanceof Error){
 				message = {'text' : util.format('cannot load XML "%s"\nError:%s\nTrace:%s',uri,error.message,error.stack)};
@@ -64,8 +77,8 @@ function loadXmlAsync(uri, settingsInfo, slackInfo){
 		}
 		
 		try{
-			xmlobj = await xmlparseAsync(body, {trim: true, explicitArray: false });
-			message = processObject(xmlobj, settingsInfo);
+			xmlobj = await xmlparseAsync(body, {trim: true, explicitArray: false }) as any;
+			message = processObject(xmlobj);
 			if(message){
 				message.webhook = slackInfo.notify.webhook;
 				message.channel = slackInfo.notify.channel;
@@ -85,7 +98,7 @@ function loadXmlAsync(uri, settingsInfo, slackInfo){
 }
 
 // メッセージ種別に応じた処理を呼ぶ
-function processObject(object, settingsInfo){
+function processObject(object:any){
 	if(object && object.Report && object.Report.Body && object.Report.Body.Intensity && object.Report.Body.Intensity.Observation && object.Report.Body.Intensity.Observation.MaxInt &&
 		settingsInfo.AlertIntensityType.includes(object.Report.Body.Intensity.Observation.MaxInt)) {
 		const title = object && object.Report && object.Report.Head && object.Report.Head.Title;
@@ -108,12 +121,12 @@ function processObject(object, settingsInfo){
 }
 
 // Slackメッセージアタッチメントを作成
-function makeAttachment(object){
-	const message = {};
+function makeAttachment(object:any){
+	const message:any = {};
 	message.footer= object.Report.Control.EditorialOffice;
 	
 	const reportDate = new Date(object.Report.Head.ReportDateTime);
-	message.ts = parseInt(reportDate.getTime()/1000);
+	message.ts = parseInt(String(reportDate.getTime()/1000));
 	
 	const targetDate = (object.Report.Body.Earthquake) ?
 		new Date(object.Report.Body.Earthquake.OriginTime) : 
@@ -141,7 +154,7 @@ function makeAttachment(object){
 }
 
 // tenki.jpの震源画像URIを生成
-function getTenkiJpMapImageURI(eventID){
+function getTenkiJpMapImageURI(eventID:string){
 
 	const year    = eventID.substring(0,4);
 	const month   = eventID.substring(4,6);
@@ -154,7 +167,7 @@ function getTenkiJpMapImageURI(eventID){
 }
 
 // Slackメッセージ概要を作成
-function makeSlackMessage(message,object){
+function makeSlackMessage(message:any, object:any){
 
 	const msgType = object.Report.Control.Status === '通常' ? '' : '('+object.Report.Control.Status+')';
 	return {
@@ -165,18 +178,18 @@ function makeSlackMessage(message,object){
 }
 
 // 震度速報
-function processSummary(object){
-	const message = makeAttachment(object);
+function processSummary(object:any){
+	const message:any = makeAttachment(object);
 	
 	const items = Array.isArray(object.Report.Head.Headline.Information.Item) ?
 		 object.Report.Head.Headline.Information.Item :
 		[object.Report.Head.Headline.Information.Item] ;
 	
-	items.forEach((item) => {
-		const areas = [];
+	items.forEach((item:any) => {
+		const areas:Array<string> = [];
 		const areaList = Array.isArray(item.Areas.Area) ? item.Areas.Area : [item.Areas.Area];
 		
-		areaList.forEach((area) => {
+		areaList.forEach((area:any) => {
 			areas.push(area.Name);
 		});
 		
@@ -192,7 +205,7 @@ function processSummary(object){
 }
 
 // 震源に関する情報
-function processEpicenter(object){
+function processEpicenter(object:any){
 	const message = makeAttachment(object);
 	
 	loadEpicenter(message,object);
@@ -201,7 +214,7 @@ function processEpicenter(object){
 }
 
 // 震源情報の読み込み
-function loadEpicenter(message,object)
+function loadEpicenter(message:any, object:any)
 {
 	const info = object.Report.Body.Earthquake;
 	
@@ -226,19 +239,19 @@ function loadEpicenter(message,object)
 }
 
 // 震源・震度に関する情報
-function processDetail(object){
+function processDetail(object:any){
 	const message = makeAttachment(object);
 	//console.log('object:'+util.inspect(object,{ showHidden: true, depth: null }));
 	
-	loadEpicenter(message,object);
-	loadIntensity(message,object);
+	loadEpicenter(message, object);
+	loadIntensity(message, object);
 	
 	return makeSlackMessage(message,object);
 	//console.log('message:'+util.inspect(msg,{ showHidden: true, depth: null }));
 }
 
 // 5,6の+/-を強弱に入れ替える
-function convertIntensityNum(intensity)
+function convertIntensityNum(intensity:string)
 {
 	switch(intensity){
 		case '6+':
@@ -255,19 +268,19 @@ function convertIntensityNum(intensity)
 }
 
 // 震度詳細の読み込み
-function loadIntensity(message,object)
+function loadIntensity(message:any, object:any)
 {
-	const intencityInfo = [];
+	const intencityInfo:Array<string> = [];
 	
 	const prefList = Array.isArray(object.Report.Body.Intensity.Observation.Pref) ?
 		 object.Report.Body.Intensity.Observation.Pref :
 		[object.Report.Body.Intensity.Observation.Pref];
 	
-	prefList.forEach( (pref) => {
-		const areas = [];
-		const areaList = Array.isArray(pref.Area) ? pref.Area : [pref.Area];
+	prefList.forEach( (pref:any) => {
+		const areas:Array<string> = [];
+		const areaList:Array<string> = Array.isArray(pref.Area) ? pref.Area : [pref.Area];
 		
-		areaList.forEach((area) => {
+		areaList.forEach((area:any) => {
 			const shortName = area.Name === pref.Name ? pref.Name : area.Name.replace(pref.Name,'');
 			areas.push(util.format('%s(最大震度 %s)',shortName, convertIntensityNum(area.MaxInt) ));
 		});
@@ -281,8 +294,7 @@ function loadIntensity(message,object)
 	});
 }
 
-// asyncなhttp.get
-function httpGetAsync(uri,encoding='utf8')
+function getEntryAsync(uri:string, encoding='utf8')
 {
 	return new Promise((resolve, reject) => {
 		http.get(uri,(res) => {
@@ -292,7 +304,7 @@ function httpGetAsync(uri,encoding='utf8')
 			}
 			
 			let body = '';
-			res.setEncoding(encoding);
+			//res.setEncoding(encoding);
 			res.on('data', (chunk) => {
 				body += chunk;
 			});
@@ -307,7 +319,8 @@ function httpGetAsync(uri,encoding='utf8')
 }
 
 // asyncなhttps post
-function httpsPostAsync(uri,object)
+/*
+function httpsPostAsync(uri:string, object:any)
 {
 	return new Promise((resolve, reject) => {
 	
@@ -342,3 +355,4 @@ function httpsPostAsync(uri,object)
 		req.end();
 	});
 }
+*/
