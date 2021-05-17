@@ -86,18 +86,21 @@ function loadXmlAsync(uri, settingsInfo, slackInfo){
 
 // メッセージ種別に応じた処理を呼ぶ
 function processObject(object, settingsInfo){
-	const title = object && object.Report && object.Report.Head && object.Report.Head.Title;
-	if(settingsInfo.AlertKind.includes(title)) {
-		switch(title){
-			case '震度速報':
-				return processSummary(object);
-			case '震源に関する情報':
-				return processEpicenter(object);
-			case '震源・震度情報':
-				return processDetail(object);
-			default:
-				console.log('unknown title:'+title);
-				return null;
+	if(object && object.Report && object.Report.Body && object.Report.Body.Intensity && object.Report.Body.Intensity.Observation && object.Report.Body.Intensity.Observation.MaxInt &&
+		settingsInfo.AlertIntensityType.includes(object.Report.Body.Intensity.Observation.MaxInt)) {
+		const title = object && object.Report && object.Report.Head && object.Report.Head.Title;
+		if(settingsInfo.AlertTitleType.includes(title)) {
+			switch(title){
+				case '震度速報':
+					return processSummary(object);
+				case '震源に関する情報':
+					return processEpicenter(object);
+				case '震源・震度情報':
+					return processDetail(object);
+				default:
+					console.log('unknown title:'+title);
+					return null;
+			}
 		}
 	} else {
 		return null;
