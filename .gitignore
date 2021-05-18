@@ -102,7 +102,9 @@ dist
 
 # TernJS port file
 .tern-port
-.env_live
+
+# Environment
+.env_*
 
 # config
 config/*.json
