@@ -4,8 +4,8 @@ After=syslog.target network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/node /path/to/slack-jma-alerter/jmapull.js  # インストール先ディレクトリへ変更してください
-WorkingDirectory=/path/to/slack-jma-alerter                          # インストール先ディレクトリへ変更してください
+ExecStart=/usr/local/bin/npm run start
+WorkingDirectory=/path/to/slack-jma-alerter                         # インストール先ディレクトリへ変更してください
 KillMode=process
 Restart=always
 User=www-data                                                       # 実行ユーザー名へ変更してください
