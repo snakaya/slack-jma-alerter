@@ -29,16 +29,11 @@ function processXmlAsync(uri:string){
 		const message:any = await loadXmlAsync(uri);
 
 		if(message){
-			console.log(JSON.stringify(message));
+
 			try{
-				const result = await app.client.chat.postMessage({
-					token: process.env.SLACK_BOT_TOKEN,
-					channel: process.env.CHANNELL_NAME,
-					text: JSON.stringify(message)
-				});
+				message.token = process.env.SLACK_BOT_TOKEN;
+				const result = await app.client.chat.postMessage(message);
 				resolve(null);
-				//const response = await httpsPostAsync(message.webhook ,message);
-				//resolve(response);
 			}catch(error){
 				if(error instanceof Error){
 					console.log('http posting error:%s\n%s',error.message,error.stack);
@@ -317,42 +312,3 @@ function getEntryAsync(uri:string, encoding='utf8')
 		});
 	});
 }
-
-// asyncなhttps post
-/*
-function httpsPostAsync(uri:string, object:any)
-{
-	return new Promise((resolve, reject) => {
-	
-		const data = JSON.stringify(object);
-		const options = url.parse(uri);
-		options.headers = {
-			'Content-Type': 'application/json',
-			'Content-Length': Buffer.byteLength(data),
-		};
-		options.method='POST';
-		
-		const req = https.request(options,(res) => {
-			if (res.statusCode < 200 || res.statusCode >= 300) {
-				reject(new Error('statusCode=' + res.statusCode));
-				return;
-			}
-			
-			let body = '';
-			res.setEncoding('utf8');
-			res.on('data', (chunk) => {
-				body += chunk;
-			});
-			
-			res.on('end', () => {
-				resolve(body);
-			});
-		}).on('error',(error) => {
-			reject(error);
-		});
-		
-		req.write(data);
-		req.end();
-	});
-}
-*/

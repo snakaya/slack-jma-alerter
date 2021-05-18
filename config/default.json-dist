@@ -1,4 +1,4 @@
-export = {
+{
 	"Settings": {
 		"EqvolURL": "http://www.data.jma.go.jp/developer/xml/feed/eqvol.xml",   //  地震火山情報用AtomフィードURL
 		"StateFileName": "/tmp/state.json",                                     //  ステータス管理ファイル名

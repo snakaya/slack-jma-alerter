@@ -15,21 +15,20 @@ const writeFileAsync = util.promisify(fs.writeFileSync);
 
 export const pollingAsync = async (eqvolURL: string, stateCacheFile: string): Promise<void> => {
 
-	let lastModified, currentLastEntries;
+	let lastModified:Date, currentLastEntries:any;
 	
 	try{
 		const currentStateJSON = fs.readFileSync(stateCacheFile,'utf-8');
-		
 		const currentState = await JSON.parse(currentStateJSON);
 		
-		let lastModified = new Date(currentState.lastModified);
-		let currentLastEntries: JmaEntries = currentState.entry;
+		lastModified = new Date(currentState.lastModified);
+		currentLastEntries = currentState.entry;
 		
 	}catch(e){
 		console.log("STATE:" + e);
 	}
 
-	let data, body;
+	let data:any, body:any;
 	try{
 		const result:any = await getFeedAsync(eqvolURL, lastModified);
 		if(result.data === null){
@@ -46,7 +45,7 @@ export const pollingAsync = async (eqvolURL: string, stateCacheFile: string): Pr
 	
 	console.log((new Date()).toString() + ": FeedLastModified: " + lastModified.toString());
 	
-	let newLastEntries;
+	let newLastEntries:JmaEntries;
 	try{
 		newLastEntries = filterFeedEntries(data, currentLastEntries);
 	}catch(e){
@@ -69,7 +68,7 @@ export const pollingAsync = async (eqvolURL: string, stateCacheFile: string): Pr
 
 }
 
-function filterFeedEntries(data:any, currentLastEntries: { [href: string]: number }) {
+function filterFeedEntries(data:any, currentLastEntries:any) {
 	let newLastEntries: JmaEntries = {};
 	let filteredEntries = [];
 	
