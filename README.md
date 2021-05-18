@@ -8,6 +8,7 @@
 
 ## 改造部分
 
+- TypeScript & Bolt対応
 - POSTする地震情報の種類および震度をConfigファイルで設定できるようにしました
 - Linixのsystemd用のserviceファイルを同梱しました
 - ステータス保存ファイル(state.json)の位置はデフォルトで/tmp以下としてConfigファイルで設定できるようにしました
@@ -25,13 +26,12 @@
 
 - 起動する
 
-  - ` node ./jmapull.js `
+  - ` npm run start `
   - またはsystemd用のserviceファイルを設定してsystemctlコマンドから起動して下さい
 
 ## TODO
 
 - [ ] 気象情報への対応
-- [ ] TS化
 
 ## License
 
