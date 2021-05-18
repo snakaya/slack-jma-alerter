@@ -29,6 +29,10 @@
   - ` npm run start `
   - またはsystemd用のserviceファイルを設定してsystemctlコマンドから起動して下さい
 
+## Permissiona
+
+- OAuth Scopesとして、 `incoming-webhook` および `chat:write` が必要です
+
 ## TODO
 
 - [ ] 気象情報への対応
