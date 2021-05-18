@@ -2,7 +2,6 @@ import { processEntriesAsync } from "./parseEntries";
 import fs from 'fs';
 import util from 'util';
 import http from 'http';
-import config from "config";
 
 interface JmaEntries {
 	[href: string]: number;

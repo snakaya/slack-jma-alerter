@@ -1,7 +1,5 @@
 import * as util from 'util';
 import * as http from 'http';
-import * as https from 'https';
-import * as url from 'url';
 import config from "config";
 import { App, LogLevel } from "@slack/bolt";
 
