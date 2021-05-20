@@ -109,3 +109,5 @@ dist
 # config
 config/*.json
 config/*.ts
+
+xml_sample
