@@ -110,4 +110,6 @@ dist
 config/*.json
 config/*.ts
 
-xml_sample
+# Project
+xml_sample/
+icons/
