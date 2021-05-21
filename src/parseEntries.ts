@@ -73,10 +73,13 @@ function loadXmlAsync(uri:string){
 		
 		try{
 			xmlobj = await xmlparseAsync(body, {trim: true, explicitArray: false }) as any;
-			message = processObject(xmlobj);
-			if(message){
-				message.webhook = slackInfo.notify.webhook;
-				message.channel = slackInfo.notify.channel;
+			let attachment:any = processObject(xmlobj);
+			if(attachment){
+				message = makeSlackMessage(attachment, xmlobj);
+				if(message){
+					message.webhook = slackInfo.notify.webhook;
+					message.channel = slackInfo.notify.channel;
+				}
 			}
 		}catch(error){
 			const dump = util.inspect(xmlobj,{ showHidden: true, depth: null });
@@ -116,7 +119,15 @@ function processObject(object:any){
 	}
 }
 
+// Slackメッセージ概要を作成
+function makeSlackMessage(attachement:any, object:any){
 
+	const msgType = object.Report.Control.Status === '通常' ? '[' + object.Report.Head.Title + '] ' : '[' + object.Report.Control.Status + ']';
+	return {
+		'text'        : msgType + object.Report.Head.Headline.Text,
+		'attachments' : Array.isArray(attachement) ? attachement : [attachement] ,
+	};
+}
 
 function getEntryAsync(uri:string, encoding='utf8')
 {

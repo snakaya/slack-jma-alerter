@@ -3,7 +3,7 @@ import * as util from 'util';
 
 // 震度速報
 export const processEvolSummary = (object:any) => {
-	const message:any = makeAttachment(object);
+	const attachement:any = makeAttachment(object);
 	
 	const items = Array.isArray(object.Report.Head.Headline.Information.Item) ?
 		 object.Report.Head.Headline.Information.Item :
@@ -17,24 +17,24 @@ export const processEvolSummary = (object:any) => {
 			areas.push(area.Name);
 		});
 		
-		message.fields.push({
+		attachement.fields.push({
 			'title' : item.Kind.Name,
 			'value' : areas.join()
 		});
 
 	});
 	
-	return makeSlackMessage(message,object);
+	return attachement;
 
 }
 
 // 震源に関する情報
 export const processEvolEpicenter = (object:any) => {
-	const message = makeAttachment(object);
+	const attachement = makeAttachment(object);
 	
-	loadEpicenter(message,object);
+	loadEpicenter(attachement,object);
 	
-	return  makeSlackMessage(message,object);
+	return  attachement;
 }
 
 // 震源・震度に関する情報
@@ -45,20 +45,10 @@ export const processEvolDetail = (object:any) => {
 	loadEpicenter(attachement, object);
 	loadIntensity(attachement, object);
 	
-	return makeSlackMessage(attachement,object);
-	//console.log('message:'+util.inspect(msg,{ showHidden: true, depth: null }));
+	return attachement;
+	//console.log('attachement:'+util.inspect(attachement,{ showHidden: true, depth: null }));
 }
 
-
-// Slackメッセージ概要を作成
-function makeSlackMessage(attachement:any, object:any){
-
-	const msgType = object.Report.Control.Status === '通常' ? '[' + object.Report.Head.Title + '] ' : '(' + object.Report.Control.Status + ')';
-	return {
-		'text'        : msgType + object.Report.Head.Headline.Text,
-		'attachments' : Array.isArray(attachement) ? attachement : [attachement] ,
-	};
-}
 
 // Slackメッセージアタッチメントを作成
 function makeAttachment(object:any){
