@@ -1,18 +1,21 @@
-import { processEntriesAsync } from "./parseEntries";
+import { processEntryAsync } from "./parseEntries";
 import fs from 'fs';
 import util from 'util';
 import http from 'http';
+import { App, LogLevel } from "@slack/bolt";
 
-interface JmaEntries {
-	[href: string]: number;
-}
+const app = new App({
+    token: process.env.SLACK_BOT_TOKEN,
+    signingSecret: process.env.SLACK_SIGNING_SECRET,
+    logLevel: LogLevel.DEBUG
+});
 
 const xmlparseAsync = util.promisify(require('xml2js').parseString);
 const readFileAsync = util.promisify(fs.readFileSync);
 const writeFileAsync = util.promisify(fs.writeFileSync);
 
 
-export const pollingAsync = async (eqvolURL: string, stateCacheFile: string): Promise<void> => {
+export const pollingAsync = async (feedURL: string, stateCacheFile: string): Promise<void> => {
 
 	let lastModified:Date, currentLastEntries:any;
 	
@@ -29,7 +32,7 @@ export const pollingAsync = async (eqvolURL: string, stateCacheFile: string): Pr
 
 	let data:any, body:any;
 	try{
-		const result:any = await getFeedAsync(eqvolURL, lastModified);
+		const result:any = await getFeedAsync(feedURL, lastModified);
 		if(result.data === null){
 			// no data.
 			return;
@@ -62,7 +65,30 @@ export const pollingAsync = async (eqvolURL: string, stateCacheFile: string): Pr
 	}
 	
 	console.log((new Date()).toString() + ": BEGIN");
-	await processEntriesAsync(data.feed.entry);
+    for(const entry of data.feed.entry){
+	    await processEntryAsync(entry).then((message:any) => {
+            console.log('message:' + util.inspect(message,{ showHidden: true, depth: null }));
+            if(message){
+
+                try{
+                    message.token = process.env.SLACK_BOT_TOKEN;
+                    console.log('message:' + util.inspect(message,{ showHidden: true, depth: null }));
+                    const result = app.client.chat.postMessage(message);
+                }catch(error){
+                    if(error instanceof Error){
+                        console.log('http posting error:%s\n%s',error.message,error.stack);
+                    }else{
+                        console.log('http posting error:%s',error);
+                    }
+                }
+                
+            }else{
+                console.log('deprecaetd');
+            }
+        }).catch((reason:any) => {
+            console.log('postMessage Error:' + reason);
+        });
+    }
 	console.log((new Date()).toString() + ": END");
 
 }

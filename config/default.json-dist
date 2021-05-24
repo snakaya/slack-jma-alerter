@@ -1,8 +1,14 @@
 {
 	"Settings": {
+		"WeatherURL": "http://www.data.jma.go.jp/developer/xml/feed/extra.xml", //  気象情報用AtomフィードURL
 		"EqvolURL": "http://www.data.jma.go.jp/developer/xml/feed/eqvol.xml",   //  地震火山情報用AtomフィードURL
-		"StateFileName": "/tmp/state.json",                                     //  ステータス管理ファイル名
-		"AlertTitleType": ["震度速報","震源に関する情報","震源・震度情報"],           //  通知する情報種類(のTitle名)の種類を選択して下さい
+		"StateWeatherFileName": "/tmp/state_weather.json",                      //  気象情報用ステータス管理ファイル名
+		"StateEvolFileName": "/tmp/state_evol.json",                            //  地震火山情報用ステータス管理ファイル名
+        "AlertWeatherTitleType": ["記録的短時間大雨情報","気象特別警報・警報・注意報"], //  通知する気象情報種類(のTitle名)の種類を選択して下さい
+		"AlertWeatherCodeType": ["1","02","03","04","05","06","07","08","32","33","35","36","37","38"],
+                                                                                //  通知する気象情報コード(http://xml.kishou.go.jp/jmaxml_20210310_code.xls)を選択して下さい
+        "AlertWeatherPrefecturesType": ["東京都","神奈川県","千葉県","埼玉県"],
+		"AlertEvolTitleType": ["震度速報","震源に関する情報","震源・震度情報"],       //  通知する地震火山情報種類(のTitle名)の種類を選択して下さい
 		"AlertIntensityType": ["1","2","3","4","5-","5+","6-","6+","7"],        //  通知する震度の種類を選択して下さい
 		"FirstEventOnly": true                                                  //  複数報ある場合の初回のみを通知するかどうか (Not yet)
 	},

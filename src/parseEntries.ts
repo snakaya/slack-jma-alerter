@@ -1,69 +1,35 @@
+import { processWeatherAlert } from "./weatherAttach";
 import { processEvolSummary, processEvolEpicenter, processEvolDetail } from "./evolAttach";
 import * as util from 'util';
 import * as http from 'http';
 import config from "config";
-import { App, LogLevel } from "@slack/bolt";
 
 const settingsInfo: any = config.get("Settings");
 const slackInfo: any = config.get("Slack");
 const xmlparseAsync = util.promisify(require('xml2js').parseString);
 
-const app = new App({
-    token: process.env.SLACK_BOT_TOKEN,
-    signingSecret: process.env.SLACK_SIGNING_SECRET,
-    logLevel: LogLevel.DEBUG
-});
-
 // feedされたエントリを処理
-export const processEntriesAsync = async (entries:any) => {
-	for(const entry of entries){
-		console.log(util.format('%s:%s\nLink:%s', entry.title, entry.content._ , entry.link.$.href));
-		await processXmlAsync(entry.link.$.href as string);
-	}
-}
-
-// XMLを処理する
-function processXmlAsync(uri:string){
-	return new Promise(async (resolve, reject) => {
-		const message:any = await loadXmlAsync(uri);
-
-		if(message){
-
-			try{
-				message.token = process.env.SLACK_BOT_TOKEN;
-				console.log('message:' + util.inspect(message,{ showHidden: true, depth: null }));
-				const result = await app.client.chat.postMessage(message);
-				resolve(null);
-			}catch(error){
-				if(error instanceof Error){
-					console.log('http posting error:%s\n%s',error.message,error.stack);
-				}else{
-					console.log('http posting error:%s',error);
-				}
-				
-				resolve(null);
-			}
-			
-		}else{
-			console.log('deprecaetd');
-			resolve(null);
-		}
-		
+export const processEntryAsync = async (entry:any) => {
+    return new Promise(async (resolve, reject) => {
+		const message:SlackMessage = await loadXmlAsync(entry.link.$.href as string);
+        //console.log('message:' + util.inspect(message,{ showHidden: true, depth: null }));
+        resolve(message);
 	});
 }
 
 // XMLを読み込んでSlackメッセージオブジェクトを作る
-function loadXmlAsync(uri:string){
+function loadXmlAsync(uri:string):Promise<SlackMessage> {
 	return new Promise(async (resolve, reject) => {
 		
-		let body:any, message:any, xmlobj:any;
+		let body:any, xmlobj:any;
+        let message:SlackMessage = initialSlackMessage();
 		try{
 			body = await getEntryAsync(uri);
 		}catch(error){
 			if(error instanceof Error){
-				message = {'text' : util.format('cannot load XML "%s"\nError:%s\nTrace:%s',uri,error.message,error.stack)};
+				message.text = util.format('cannot load XML "%s"\nError:%s\nTrace:%s',uri,error.message,error.stack);
 			}else{
-				message = {'text' : util.format('cannot load XML "%s"\n%s',uri,error)};
+				message.text = util.format('cannot load XML "%s"\n%s',uri,error);
 			}
 			message.webhook = slackInfo.error.webhook;
 			message.channel = slackInfo.error.channel;
@@ -73,7 +39,7 @@ function loadXmlAsync(uri:string){
 		
 		try{
 			xmlobj = await xmlparseAsync(body, {trim: true, explicitArray: false }) as any;
-			let attachment:any = processObject(xmlobj);
+			let attachment:SlackAttachment = processObject(xmlobj);
 			if(attachment){
 				message = makeSlackMessage(attachment, xmlobj);
 				if(message){
@@ -84,9 +50,12 @@ function loadXmlAsync(uri:string){
 		}catch(error){
 			const dump = util.inspect(xmlobj,{ showHidden: true, depth: null });
 			if(error instanceof Error){
-				message = {'text' : util.format('cannot parse XML "%s"\nError:%s\nTrace:%s\n%s',uri,error.message,error.stack,dump)};
+                
+				//message = {'text' : util.format('cannot parse XML "%s"\nError:%s\nTrace:%s\n%s',uri,error.message,error.stack,dump)};
+				message.text = util.format('cannot parse XML "%s"\nError:%s\nTrace:%s\n',uri,error.message,error.stack);
 			}else{
-				message = {'text' : util.format('cannot parse XML "%s"\n%s\n%s',uri,error,dump)};
+				//message = {'text' : util.format('cannot parse XML "%s"\n%s\n%s',uri,error,dump)};
+				message.text = util.format('cannot parse XML "%s"\n%s\n',uri,error);
 			}
 			message.webhook = slackInfo.error.webhook;
 			message.channel = slackInfo.error.channel;
@@ -98,34 +67,59 @@ function loadXmlAsync(uri:string){
 
 // メッセージ種別に応じた処理を呼ぶ
 function processObject(object:any){
-	if(object && object.Report && object.Report.Body && object.Report.Body.Intensity && object.Report.Body.Intensity.Observation && object.Report.Body.Intensity.Observation.MaxInt &&
-		settingsInfo.AlertIntensityType.includes(object.Report.Body.Intensity.Observation.MaxInt)) {
-		const title = object && object.Report && object.Report.Head && object.Report.Head.Title;
-		if(settingsInfo.AlertEvolTitleType.includes(title)) {
-			switch(title){
-				case '震度速報':
-					return processEvolSummary(object);
-				case '震源に関する情報':
-					return processEvolEpicenter(object);
-				case '震源・震度情報':
-					return processEvolDetail(object);
-				default:
-					console.log('unknown evol title:'+title);
-					return null;
+	let title = object && object.Report && object.Report.Head && object.Report.Head.Title;
+	if(title){
+        // TODO: '震源に関する情報'にはMaxIntが無いので震度で判定できず結果出力されない
+		if(object && object.Report && object.Report.Body && object.Report.Body.Intensity && object.Report.Body.Intensity.Observation && object.Report.Body.Intensity.Observation.MaxInt &&
+			settingsInfo.AlertIntensityType.includes(object.Report.Body.Intensity.Observation.MaxInt)) {
+			if(settingsInfo.AlertEvolTitleType.includes(title)) {
+				switch(title){
+					case '震度速報':
+						return processEvolSummary(object);
+					case '震源に関する情報':
+						return processEvolEpicenter(object);
+					case '震源・震度情報':
+						return processEvolDetail(object);
+					default:
+						console.log('unknown evol title:'+title);
+				}
 			}
 		}
+		title = object && object.Report && object.Report.Control && object.Report.Control.Title;
+		if(settingsInfo.AlertWeatherTitleType.includes(title)) {
+			switch(title){
+				case '気象特別警報・警報・注意報':
+					return processWeatherAlert(object);
+				case '記録的短時間大雨情報':
+					return processWeatherAlert(object);
+				default:
+					console.log('unknown weather title:'+title);
+					
+			}
+		}
+		return null;
 	} else {
 		return null;
 	}
 }
 
 // Slackメッセージ概要を作成
-function makeSlackMessage(attachement:any, object:any){
+function makeSlackMessage(attachement:any, object:any):SlackMessage {
 
 	const msgType = object.Report.Control.Status === '通常' ? '[' + object.Report.Head.Title + '] ' : '[' + object.Report.Control.Status + ']';
 	return {
 		'text'        : msgType + object.Report.Head.Headline.Text,
 		'attachments' : Array.isArray(attachement) ? attachement : [attachement] ,
+        'webhook'     : '',
+        'channel'     : ''
+	};
+}
+
+function initialSlackMessage():SlackMessage  {
+    return {
+		'text'        : '',
+        'webhook'     : '',
+        'channel'     : ''
 	};
 }
 

@@ -3,7 +3,7 @@ import * as util from 'util';
 
 // 震度速報
 export const processEvolSummary = (object:any) => {
-	const attachement:any = makeAttachment(object);
+	const attachement:SlackAttachment = makeAttachment(object);
 	
 	const items = Array.isArray(object.Report.Head.Headline.Information.Item) ?
 		 object.Report.Head.Headline.Information.Item :
@@ -30,16 +30,16 @@ export const processEvolSummary = (object:any) => {
 
 // 震源に関する情報
 export const processEvolEpicenter = (object:any) => {
-	const attachement = makeAttachment(object);
+	const attachement:SlackAttachment = makeAttachment(object);
 	
-	loadEpicenter(attachement,object);
+	loadEpicenter(attachement, object);
 	
-	return  attachement;
+	return attachement;
 }
 
 // 震源・震度に関する情報
 export const processEvolDetail = (object:any) => {
-	const attachement = makeAttachment(object);
+	const attachement:SlackAttachment = makeAttachment(object);
 	//console.log('object:'+util.inspect(object,{ showHidden: true, depth: null }));
 	
 	loadEpicenter(attachement, object);
@@ -52,7 +52,16 @@ export const processEvolDetail = (object:any) => {
 
 // Slackメッセージアタッチメントを作成
 function makeAttachment(object:any){
-	const attachement:any = {};
+    const fields:Array<SlackAttachmentFields> = new Array();
+    const actions:Array<SlackAttachmentAction> = new Array();
+	const attachement:SlackAttachment = {
+        footer: '',
+        ts: 0,
+        fields: fields,
+        actions: actions,
+        image_url: ''
+    };
+
 	attachement.footer= object.Report.Control.EditorialOffice;
 	
 	const reportDate = new Date(object.Report.Head.ReportDateTime);
@@ -84,7 +93,7 @@ function makeAttachment(object:any){
 }
 
 // 震源情報の読み込み
-function loadEpicenter(attachement:any, object:any)
+function loadEpicenter(attachement:SlackAttachment, object:any)
 {
 	const info = object.Report.Body.Earthquake;
 	
@@ -109,7 +118,7 @@ function loadEpicenter(attachement:any, object:any)
 }
 
 // 震度詳細の読み込み
-function loadIntensity(attachement:any, object:any)
+function loadIntensity(attachement:SlackAttachment, object:any)
 {
 	const intencityInfo:Array<string> = [];
 	
