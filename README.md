@@ -9,7 +9,8 @@
 ## 改造部分
 
 - TypeScript & Bolt対応
-- POSTする地震情報の種類および震度をConfigファイルで設定できるようにしました
+- 気象情報に対応
+- POSTする気象情報および地震情報条件をConfigファイルで設定できるようにしました
 - Linixのsystemd用のserviceファイルを同梱しました
 - ステータス保存ファイル(state.json)の位置はデフォルトで/tmp以下としてConfigファイルで設定できるようにしました
 
@@ -21,7 +22,7 @@
 
 - config/以下のdefault.json-distからdefault.jsonをコピーで作成して、適当に内容を変更する
 
-  - Settingsのステータス保存ファイルやPOSTする地震情報種類を指定します
+  - Settingsのステータス保存ファイルやPOSTする気象情報および地震情報の条件を指定します
   - Slackのincoming Webhook URIとチャンネルを指定します
 
 - 起動する
@@ -32,10 +33,6 @@
 ## Permissiona
 
 - OAuth Scopesとして、 `incoming-webhook` および `chat:write` が必要です
-
-## TODO
-
-- [ ] 気象情報への対応
 
 ## License
 
