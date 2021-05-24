@@ -11,7 +11,7 @@ const xmlparseAsync = util.promisify(require('xml2js').parseString);
 // feedされたエントリを処理
 export const processEntryAsync = async (entry:any) => {
     return new Promise(async (resolve, reject) => {
-		const message:SlackMessage = await loadXmlAsync(entry.link.$.href as string);
+		const message:SlackMessage|null = await loadXmlAsync(entry.link.$.href as string);
         //console.log('message:' + util.inspect(message,{ showHidden: true, depth: null }));
         resolve(message);
 	});
@@ -46,7 +46,9 @@ function loadXmlAsync(uri:string):Promise<SlackMessage> {
 					message.webhook = slackInfo.notify.webhook;
 					message.channel = slackInfo.notify.channel;
 				}
-			}
+			}else{
+                resolve(null);
+            }
 		}catch(error){
 			const dump = util.inspect(xmlobj,{ showHidden: true, depth: null });
 			if(error instanceof Error){
