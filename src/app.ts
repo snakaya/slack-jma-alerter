@@ -9,7 +9,6 @@ const settingsInfo: any = config.get("Settings");
 const slackInfo: any = config.get("Slack");
 const weatherURL: string = settingsInfo.WeatherURL;
 const eqvolURL: string = settingsInfo.EqvolURL;
-console.log(path.dirname(settingsInfo.StateWeatherFileName as string));
 const stateWeatherCacheFile: string = (path.dirname(settingsInfo.StateWeatherFileName as string) == '.') ? os.tmpdir() + path.sep + settingsInfo.StateWeatherFileName : settingsInfo.StateWeatherFileName;
 const stateEvolCacheFile: string = (path.dirname(settingsInfo.StateEvolFileName as string) == '.') ? os.tmpdir() + path.sep + settingsInfo.StateEvolFileName : settingsInfo.StateEvolFileName;
 
