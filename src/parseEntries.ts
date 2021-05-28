@@ -27,13 +27,11 @@ function loadXmlAsync(uri:string):Promise<SlackMessage> {
 			body = await getEntryAsync(uri);
 		}catch(error){
 			if(error instanceof Error){
-				message.text = util.format('cannot load XML "%s"\nError:%s\nTrace:%s',uri,error.message,error.stack);
+				console.log(util.format('cannot load XML "%s"\nError:%s\nTrace:%s',uri,error.message,error.stack));
 			}else{
-				message.text = util.format('cannot load XML "%s"\n%s',uri,error);
+				console.log(util.format('cannot load XML "%s"\n%s',uri,error));
 			}
-			message.webhook = slackInfo.error.webhook;
-			message.channel = slackInfo.error.channel;
-			resolve(message);
+			resolve(null);
 			return;
 		}
 		
@@ -54,13 +52,13 @@ function loadXmlAsync(uri:string):Promise<SlackMessage> {
 			if(error instanceof Error){
                 
 				//message = {'text' : util.format('cannot parse XML "%s"\nError:%s\nTrace:%s\n%s',uri,error.message,error.stack,dump)};
-				message.text = util.format('cannot parse XML "%s"\nError:%s\nTrace:%s\n',uri,error.message,error.stack);
+				console.log(util.format('cannot parse XML "%s"\nError:%s\nTrace:%s\n',uri,error.message,error.stack));
 			}else{
 				//message = {'text' : util.format('cannot parse XML "%s"\n%s\n%s',uri,error,dump)};
-				message.text = util.format('cannot parse XML "%s"\n%s\n',uri,error);
+				console.log(util.format('cannot parse XML "%s"\n%s\n',uri,error));
 			}
-			message.webhook = slackInfo.error.webhook;
-			message.channel = slackInfo.error.channel;
+			resolve(null);
+            return;
 		}
 
 		resolve(message);
